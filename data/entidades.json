@@ -1,2 +1,92 @@
-# Lista de entidades 
-
+[
+  {
+    "id": 1,
+    "nombre": "Alcaldía Municipal",
+    "descripcion": "Administración municipal principal",
+    "contacto_email": "quejas@alcaldia.gov.co",
+    "contacto_telefono": "+57 1 234 5678",
+    "direccion": "Carrera 10 #15-20, Centro",
+    "activo": true
+  },
+  {
+    "id": 2,
+    "nombre": "Secretaría de Salud",
+    "descripcion": "Gestión de servicios de salud municipal",
+    "contacto_email": "salud@alcaldia.gov.co",
+    "contacto_telefono": "+57 1 234 5679",
+    "direccion": "Carrera 8 #12-15, Centro",
+    "activo": true
+  },
+  {
+    "id": 3,
+    "nombre": "Secretaría de Educación",
+    "descripcion": "Administración del sistema educativo local",
+    "contacto_email": "educacion@alcaldia.gov.co",
+    "contacto_telefono": "+57 1 234 5680",
+    "direccion": "Calle 19 #9-45, Centro",
+    "activo": true
+  },
+  {
+    "id": 4,
+    "nombre": "Secretaría de Tránsito",
+    "descripcion": "Control y regulación del tránsito vehicular",
+    "contacto_email": "transito@alcaldia.gov.co",
+    "contacto_telefono": "+57 1 234 5681",
+    "direccion": "Avenida Norte #25-30",
+    "activo": true
+  },
+  {
+    "id": 5,
+    "nombre": "Empresas Públicas",
+    "descripcion": "Servicios públicos domiciliarios",
+    "contacto_email": "atencion@empresaspublicas.gov.co",
+    "contacto_telefono": "+57 1 234 5682",
+    "direccion": "Carrera 15 #20-10, Industrial",
+    "activo": true
+  },
+  {
+    "id": 6,
+    "nombre": "Registro Civil",
+    "descripcion": "Servicios de identificación y registro civil",
+    "contacto_email": "registro@registraduria.gov.co",
+    "contacto_telefono": "+57 1 234 5683",
+    "direccion": "Plaza Principal, Edificio Gobierno",
+    "activo": true
+  },
+  {
+    "id": 7,
+    "nombre": "Policía Nacional",
+    "descripcion": "Seguridad ciudadana y orden público",
+    "contacto_email": "quejas@policia.gov.co",
+    "contacto_telefono": "+57 1 234 5684",
+    "direccion": "Carrera 12 #18-25, Centro",
+    "activo": true
+  },
+  {
+    "id": 8,
+    "nombre": "Secretaría de Obras Públicas",
+    "descripcion": "Infraestructura y obras municipales",
+    "contacto_email": "obras@alcaldia.gov.co",
+    "contacto_telefono": "+57 1 234 5685",
+    "direccion": "Calle 22 #14-30, Norte",
+    "activo": true
+  },
+  {
+    "id": 9,
+    "nombre": "Secretaría de Gobierno",
+    "descripcion": "Administración y gobierno municipal",
+    "contacto_email": "gobierno@alcaldia.gov.co",
+    "contacto_telefono": "+57 1 234 5686",
+    "direccion": "Palacio Municipal, Centro",
+    "activo": true
+  },
+  {
+    "id": 10,
+    "nombre": "ICBF - Instituto Colombiano de Bienestar Familiar",
+    "descripcion": "Protección a la familia y menores de edad",
+    "contacto_email": "atencion@icbf.gov.co",
+    "contacto_telefono": "+57 1 234 5687",
+    "direccion": "Barrio San Rafael, Calle 45 #8-12",
+    "activo": true
+  }
+]
