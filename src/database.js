@@ -1,321 +1,533 @@
-const Database = require('better-sqlite3');
-const fs = require('fs');
-const path = require('path');
+const mysql = require('mysql2/promise');
+require('dotenv').config();
 
 class DatabaseManager {
     constructor() {
-        this.dbPath = path.join(__dirname, '..', 'data', 'database.db');
-        this.db = null;
-        this.init();
+        this.connection = null;
+        this.config = {
+            host: process.env.DB_HOST || 'localhost',
+            port: parseInt(process.env.DB_PORT) || 3306,
+            user: process.env.DB_USER || 'root',
+            password: process.env.DB_PASSWORD || '',
+            database: process.env.DB_NAME || 'complaints_boyaca',
+            charset: 'utf8mb4',
+            timezone: 'Z',
+            multipleStatements: true,
+            // Configuraciones válidas para mysql2
+            connectTimeout: 60000,
+            dateStrings: true
+        };
     }
 
-    init() {
+    async init() {
         try {
-            // Verificar si el directorio data existe
-            const dataDir = path.dirname(this.dbPath);
-            if (!fs.existsSync(dataDir)) {
-                fs.mkdirSync(dataDir, { recursive: true });
-            }
-
-            // Verificar si el archivo existe y si es válido
-            if (fs.existsSync(this.dbPath)) {
-                try {
-                    // Intentar abrir la base de datos existente
-                    this.db = new Database(this.dbPath);
-                    // Verificar si es una base de datos válida haciendo una consulta simple
-                    this.db.pragma('journal_mode = WAL');
-                } catch (error) {
-                    console.log('⚠️ Archivo de base de datos corrupto, intentando recrear...');
-                    
-                    // Cerrar la conexión si existe
-                    if (this.db) {
-                        try {
-                            this.db.close();
-                        } catch (closeError) {
-                            console.log('Error cerrando conexión:', closeError.message);
-                        }
-                        this.db = null;
-                    }
-
-                    // Intentar eliminar el archivo corrupto con reintentos
-                    this.removeCorruptedFile();
-                    
-                    // Crear nueva base de datos
-                    this.db = new Database(this.dbPath);
+            console.log('🔧 Conectando a MySQL...');
+            console.log(`   Host: ${this.config.host}:${this.config.port}`);
+            console.log(`   Base de datos: ${this.config.database}`);
+            console.log(`   Usuario: ${this.config.user}`);
+            
+            // Intentar conectar directamente a la base de datos
+            try {
+                this.connection = await mysql.createConnection(this.config);
+                await this.connection.ping();
+                console.log('✅ Conexión a MySQL establecida correctamente');
+            } catch (error) {
+                if (error.code === 'ER_BAD_DB_ERROR') {
+                    console.log('🔄 Base de datos no existe, creándola...');
+                    await this.createDatabase();
+                } else {
+                    throw error;
                 }
-            } else {
-                // Crear nueva base de datos
-                console.log('📝 Creando nueva base de datos...');
-                this.db = new Database(this.dbPath);
             }
-
-            // Configurar SQLite
-            this.db.pragma('journal_mode = WAL');
-            this.db.pragma('foreign_keys = ON');
-
-            // Crear tablas
-            this.createTables();
-            console.log('✅ Base de datos inicializada correctamente');
-
+            
+            // Verificar y crear tablas si es necesario
+            await this.verifyAndCreateTables();
+            
         } catch (error) {
-            console.error('❌ Error inicializando la base de datos:', error);
+            console.error('❌ Error inicializando la base de datos:', error.message);
+            
+            if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+                console.error('❌ Error de acceso: Verifica las credenciales de MySQL en el archivo .env');
+            } else if (error.code === 'ECONNREFUSED') {
+                console.error('❌ Error de conexión: Verifica que MySQL esté ejecutándose');
+            }
+            
             throw error;
         }
     }
 
-    removeCorruptedFile() {
-        const maxRetries = 5;
-        const retryDelay = 1000; // 1 segundo
+    async createDatabase() {
+        let tempConnection = null;
+        try {
+            // Conectar sin especificar base de datos
+            const tempConfig = { ...this.config };
+            delete tempConfig.database;
+            
+            tempConnection = await mysql.createConnection(tempConfig);
+            
+            // Crear base de datos
+            await tempConnection.execute(
+                `CREATE DATABASE IF NOT EXISTS ${this.config.database} 
+                 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+            );
+            console.log('✅ Base de datos creada exitosamente');
+            
+            await tempConnection.end();
+            
+            // Reconectar con la base de datos específica
+            this.connection = await mysql.createConnection(this.config);
+            
+        } catch (error) {
+            if (tempConnection) {
+                await tempConnection.end();
+            }
+            console.error('❌ Error creando la base de datos:', error);
+            throw error;
+        }
+    }
 
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                // Crear un nombre temporal para el archivo
-                const tempPath = this.dbPath + '.corrupted.' + Date.now();
+    async verifyAndCreateTables() {
+        try {
+            // Verificar si las tablas existen
+            const [tables] = await this.connection.execute(`
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_schema = ? AND table_name IN ('entidades', 'quejas')
+            `, [this.config.database]);
+
+            const existingTables = tables.map(row => row.table_name || row.TABLE_NAME);
+            const needsEntidades = !existingTables.includes('entidades');
+            const needsQuejas = !existingTables.includes('quejas');
+
+            if (needsEntidades || needsQuejas) {
+                console.log('📝 Creando tablas faltantes...');
+                await this.createTables();
+            } else {
+                console.log('✅ Todas las tablas existen');
+                // Verificar si necesita datos iniciales
+                await this.insertInitialDataIfNeeded();
+            }
+        } catch (error) {
+            console.error('❌ Error verificando tablas:', error);
+            throw error;
+        }
+    }
+
+    async createTables() {
+        try {
+            // Crear tabla de entidades
+            await this.connection.execute(`
+                CREATE TABLE IF NOT EXISTS entidades (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    nombre VARCHAR(255) NOT NULL UNIQUE,
+                    descripcion TEXT,
+                    contacto_email VARCHAR(255),
+                    contacto_telefono VARCHAR(50),
+                    direccion TEXT,
+                    activo BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_nombre (nombre),
+                    INDEX idx_activo (activo)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            `);
+            console.log('✅ Tabla "entidades" creada');
+
+            // Crear tabla de quejas
+            await this.connection.execute(`
+                CREATE TABLE IF NOT EXISTS quejas (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    entidad_id INT NOT NULL,
+                    descripcion TEXT NOT NULL,
+                    estado ENUM('pendiente', 'en_proceso', 'resuelto', 'rechazado') DEFAULT 'pendiente',
+                    ip_origen VARCHAR(45),
+                    user_agent TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (entidad_id) REFERENCES entidades(id) ON DELETE CASCADE,
+                    INDEX idx_entidad (entidad_id),
+                    INDEX idx_estado (estado),
+                    INDEX idx_created_at (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            `);
+            console.log('✅ Tabla "quejas" creada');
+
+            // Insertar datos iniciales
+            await this.insertInitialDataIfNeeded();
+
+        } catch (error) {
+            console.error('❌ Error creando tablas:', error);
+            throw error;
+        }
+    }
+
+    async insertInitialDataIfNeeded() {
+        try {
+            // Verificar si ya hay entidades
+            const [existingEntities] = await this.connection.execute(
+                'SELECT COUNT(*) as count FROM entidades'
+            );
+            
+            if (existingEntities[0].count === 0) {
+                console.log('📝 Insertando datos iniciales de entidades...');
                 
-                // Intentar renombrar en lugar de eliminar directamente
-                fs.renameSync(this.dbPath, tempPath);
-                
-                // Intentar eliminar el archivo renombrado
-                setTimeout(() => {
-                    try {
-                        fs.unlinkSync(tempPath);
-                        console.log('✅ Archivo corrupto eliminado exitosamente');
-                    } catch (deleteError) {
-                        console.log(`⚠️ No se pudo eliminar el archivo temporal: ${tempPath}`);
-                    }
-                }, 100);
-                
-                console.log(`✅ Archivo corrupto movido exitosamente (intento ${attempt})`);
-                return;
-                
-            } catch (error) {
-                console.log(`❌ Intento ${attempt} fallido: ${error.message}`);
-                
-                if (attempt === maxRetries) {
-                    // Si todos los intentos fallan, crear con un nombre diferente
-                    console.log('⚠️ No se pudo eliminar el archivo corrupto, usando nombre alternativo...');
-                    this.dbPath = this.dbPath.replace('.db', '_new.db');
-                    return;
+                const entidades = [
+                    ['Alcaldía Municipal', 'Administración municipal principal', 'quejas@alcaldia.gov.co', '+57 1 234 5678', 'Carrera 10 #15-20, Centro', true],
+                    ['Secretaría de Salud', 'Gestión de servicios de salud municipal', 'salud@alcaldia.gov.co', '+57 1 234 5679', 'Carrera 8 #12-15, Centro', true],
+                    ['Secretaría de Educación', 'Administración del sistema educativo local', 'educacion@alcaldia.gov.co', '+57 1 234 5680', 'Calle 19 #9-45, Centro', true],
+                    ['Secretaría de Tránsito', 'Control y regulación del tránsito vehicular', 'transito@alcaldia.gov.co', '+57 1 234 5681', 'Avenida Norte #25-30', true],
+                    ['Empresas Públicas', 'Servicios públicos domiciliarios', 'atencion@empresaspublicas.gov.co', '+57 1 234 5682', 'Carrera 15 #20-10, Industrial', true],
+                    ['Registro Civil', 'Servicios de identificación y registro civil', 'registro@registraduria.gov.co', '+57 1 234 5683', 'Plaza Principal, Edificio Gobierno', true],
+                    ['Policía Nacional', 'Seguridad ciudadana y orden público', 'quejas@policia.gov.co', '+57 1 234 5684', 'Carrera 12 #18-25, Centro', true],
+                    ['Secretaría de Obras Públicas', 'Infraestructura y obras municipales', 'obras@alcaldia.gov.co', '+57 1 234 5685', 'Calle 22 #14-30, Norte', true],
+                    ['Secretaría de Gobierno', 'Administración y gobierno municipal', 'gobierno@alcaldia.gov.co', '+57 1 234 5686', 'Palacio Municipal, Centro', true],
+                    ['ICBF - Instituto Colombiano de Bienestar Familiar', 'Protección a la familia y menores de edad', 'atencion@icbf.gov.co', '+57 1 234 5687', 'Barrio San Rafael, Calle 45 #8-12', true]
+                ];
+
+                const insertQuery = `
+                    INSERT INTO entidades (nombre, descripcion, contacto_email, contacto_telefono, direccion, activo) 
+                    VALUES (?, ?, ?, ?, ?, ?)
+                `;
+
+                for (const entidad of entidades) {
+                    await this.connection.execute(insertQuery, entidad);
                 }
-                
-                // Esperar antes del siguiente intento
-                this.sleep(retryDelay * attempt);
+
+                console.log(`✅ ${entidades.length} entidades insertadas exitosamente`);
+            }
+        } catch (error) {
+            console.error('❌ Error insertando datos iniciales:', error);
+            throw error;
+        }
+    }
+
+    // ==================== MÉTODOS PARA QUEJAS ====================
+
+    async getAllQuejas() {
+        try {
+            const [rows] = await this.connection.execute(`
+                SELECT 
+                    q.id,
+                    q.entidad_id,
+                    e.nombre as entidad_nombre,
+                    q.descripcion,
+                    q.estado,
+                    q.created_at,
+                    q.updated_at
+                FROM quejas q 
+                INNER JOIN entidades e ON q.entidad_id = e.id 
+                ORDER BY q.created_at DESC
+            `);
+            return rows;
+        } catch (error) {
+            console.error('Error obteniendo todas las quejas:', error);
+            throw error;
+        }
+    }
+
+    async getQuejaById(id) {
+        try {
+            const [rows] = await this.connection.execute(`
+                SELECT 
+                    q.id,
+                    q.entidad_id,
+                    e.nombre as entidad_nombre,
+                    e.descripcion as entidad_descripcion,
+                    e.contacto_email,
+                    e.contacto_telefono,
+                    e.direccion,
+                    q.descripcion,
+                    q.estado,
+                    q.created_at,
+                    q.updated_at
+                FROM quejas q 
+                INNER JOIN entidades e ON q.entidad_id = e.id 
+                WHERE q.id = ?
+            `, [id]);
+            
+            return rows.length > 0 ? rows[0] : null;
+        } catch (error) {
+            console.error('Error obteniendo queja por ID:', error);
+            throw error;
+        }
+    }
+
+    async createQueja(queja) {
+        try {
+            const [result] = await this.connection.execute(`
+                INSERT INTO quejas (entidad_id, descripcion, ip_origen, user_agent)
+                VALUES (?, ?, ?, ?)
+            `, [
+                queja.entidad_id,
+                queja.descripcion,
+                queja.ip_origen || null,
+                queja.user_agent || null
+            ]);
+            
+            return { insertId: result.insertId };
+        } catch (error) {
+            console.error('Error creando queja:', error);
+            throw error;
+        }
+    }
+
+    async updateQuejaStatus(id, estado) {
+        try {
+            const [result] = await this.connection.execute(`
+                UPDATE quejas 
+                SET estado = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [estado, id]);
+            
+            return result.affectedRows > 0;
+        } catch (error) {
+            console.error('Error actualizando estado de queja:', error);
+            throw error;
+        }
+    }
+
+    async deleteQueja(id) {
+        try {
+            const [result] = await this.connection.execute(
+                'DELETE FROM quejas WHERE id = ?', 
+                [id]
+            );
+            
+            return result.affectedRows > 0;
+        } catch (error) {
+            console.error('Error eliminando queja:', error);
+            throw error;
+        }
+    }
+
+    async getQuejasByEntidad(entidadId) {
+        try {
+            const [rows] = await this.connection.execute(`
+                SELECT 
+                    q.id,
+                    q.entidad_id,
+                    e.nombre as entidad_nombre,
+                    q.descripcion,
+                    q.estado,
+                    q.created_at,
+                    q.updated_at
+                FROM quejas q 
+                INNER JOIN entidades e ON q.entidad_id = e.id 
+                WHERE q.entidad_id = ?
+                ORDER BY q.created_at DESC
+            `, [entidadId]);
+            
+            return rows;
+        } catch (error) {
+            console.error('Error obteniendo quejas por entidad:', error);
+            throw error;
+        }
+    }
+
+    // ==================== MÉTODOS PARA ENTIDADES ====================
+
+    async getAllEntidades() {
+        try {
+            const [rows] = await this.connection.execute(`
+                SELECT * FROM entidades 
+                WHERE activo = TRUE 
+                ORDER BY nombre
+            `);
+            return rows;
+        } catch (error) {
+            console.error('Error obteniendo entidades:', error);
+            throw error;
+        }
+    }
+
+    async getEntidadById(id) {
+        try {
+            const [rows] = await this.connection.execute(
+                'SELECT * FROM entidades WHERE id = ?', 
+                [id]
+            );
+            
+            return rows.length > 0 ? rows[0] : null;
+        } catch (error) {
+            console.error('Error obteniendo entidad por ID:', error);
+            throw error;
+        }
+    }
+
+    async getEntidadByNombre(nombre) {
+        try {
+            const [rows] = await this.connection.execute(`
+                SELECT * FROM entidades 
+                WHERE nombre LIKE ? AND activo = TRUE
+                LIMIT 1
+            `, [`%${nombre}%`]);
+            
+            return rows.length > 0 ? rows[0] : null;
+        } catch (error) {
+            console.error('Error obteniendo entidad por nombre:', error);
+            throw error;
+        }
+    }
+
+    // ==================== MÉTODOS PARA REPORTES ====================
+
+    async getQuejasPorEstado() {
+        try {
+            const [rows] = await this.connection.execute(`
+                SELECT estado, COUNT(*) as count 
+                FROM quejas 
+                GROUP BY estado
+                ORDER BY count DESC
+            `);
+            return rows;
+        } catch (error) {
+            console.error('Error obteniendo quejas por estado:', error);
+            throw error;
+        }
+    }
+
+    async getQuejasPorEntidad() {
+        try {
+            const [rows] = await this.connection.execute(`
+                SELECT 
+                    e.id,
+                    e.nombre as entidad, 
+                    COUNT(q.id) as count 
+                FROM entidades e 
+                LEFT JOIN quejas q ON e.id = q.entidad_id 
+                WHERE e.activo = TRUE
+                GROUP BY e.id, e.nombre 
+                ORDER BY count DESC
+            `);
+            return rows;
+        } catch (error) {
+            console.error('Error obteniendo quejas por entidad:', error);
+            throw error;
+        }
+    }
+
+    async getQuejasPorMes(limite = 12) {
+        try {
+            const [rows] = await this.connection.execute(`
+                SELECT 
+                    DATE_FORMAT(created_at, '%Y-%m') as mes,
+                    COUNT(*) as count 
+                FROM quejas 
+                GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+                ORDER BY mes DESC
+                LIMIT ?
+            `, [limite]);
+            return rows;
+        } catch (error) {
+            console.error('Error obteniendo quejas por mes:', error);
+            throw error;
+        }
+    }
+
+    async getEstadisticasGenerales() {
+        try {
+            const [totalQuejas] = await this.connection.execute(
+                'SELECT COUNT(*) as total FROM quejas'
+            );
+            
+            const [totalEntidades] = await this.connection.execute(
+                'SELECT COUNT(*) as total FROM entidades WHERE activo = TRUE'
+            );
+            
+            const [quejasHoy] = await this.connection.execute(`
+                SELECT COUNT(*) as total 
+                FROM quejas 
+                WHERE DATE(created_at) = CURDATE()
+            `);
+            
+            const [quejasMes] = await this.connection.execute(`
+                SELECT COUNT(*) as total 
+                FROM quejas 
+                WHERE MONTH(created_at) = MONTH(CURDATE()) 
+                AND YEAR(created_at) = YEAR(CURDATE())
+            `);
+
+            return {
+                total_quejas: totalQuejas[0].total,
+                total_entidades: totalEntidades[0].total,
+                quejas_hoy: quejasHoy[0].total,
+                quejas_mes_actual: quejasMes[0].total
+            };
+        } catch (error) {
+            console.error('Error obteniendo estadísticas generales:', error);
+            throw error;
+        }
+    }
+
+    // ==================== MÉTODOS UTILITARIOS ====================
+
+    async healthCheck() {
+        try {
+            await this.connection.ping();
+            const [result] = await this.connection.execute('SELECT 1 as test');
+            return result[0].test === 1;
+        } catch (error) {
+            console.error('Health check failed:', error);
+            return false;
+        }
+    }
+
+    async getConnectionInfo() {
+        try {
+            const [result] = await this.connection.execute(`
+                SELECT 
+                    DATABASE() as current_database,
+                    USER() as current_user,
+                    VERSION() as mysql_version,
+                    NOW() as current_time
+            `);
+            return result[0];
+        } catch (error) {
+            console.error('Error obteniendo información de conexión:', error);
+            throw error;
+        }
+    }
+
+    async executeQuery(query, params = []) {
+        try {
+            const [rows] = await this.connection.execute(query, params);
+            return rows;
+        } catch (error) {
+            console.error('Error ejecutando consulta personalizada:', error);
+            throw error;
+        }
+    }
+
+    // ==================== GESTIÓN DE CONEXIÓN ====================
+
+    async reconnect() {
+        try {
+            if (this.connection) {
+                await this.connection.end();
+            }
+            await this.init();
+            console.log('✅ Reconexión exitosa');
+        } catch (error) {
+            console.error('❌ Error en reconexión:', error);
+            throw error;
+        }
+    }
+
+    async close() {
+        if (this.connection) {
+            try {
+                await this.connection.end();
+                this.connection = null;
+                console.log('📫 Conexión a MySQL cerrada correctamente');
+            } catch (error) {
+                console.error('Error cerrando conexión:', error);
             }
         }
     }
 
-    sleep(ms) {
-        const start = Date.now();
-        while (Date.now() - start < ms) {
-            // Espera sincrónica
-        }
-    }
-
-    createTables() {
-        // Tabla de quejas
-        const createComplaintsTable = `
-            CREATE TABLE IF NOT EXISTS complaints (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                description TEXT NOT NULL,
-                entity TEXT NOT NULL,
-                category TEXT NOT NULL,
-                status TEXT DEFAULT 'pending',
-                citizen_name TEXT NOT NULL,
-                citizen_email TEXT NOT NULL,
-                citizen_phone TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `;
-
-        // Tabla de entidades
-        const createEntitiesTable = `
-            CREATE TABLE IF NOT EXISTS entities (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                type TEXT NOT NULL,
-                contact_email TEXT,
-                contact_phone TEXT,
-                address TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `;
-
-        // Tabla de categorías
-        const createCategoriesTable = `
-            CREATE TABLE IF NOT EXISTS categories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                description TEXT,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `;
-
-        // Ejecutar creación de tablas
-        this.db.exec(createComplaintsTable);
-        this.db.exec(createEntitiesTable);
-        this.db.exec(createCategoriesTable);
-
-        // Insertar datos iniciales si las tablas están vacías
-        this.insertInitialData();
-    }
-
-    insertInitialData() {
-        // Verificar si ya hay datos
-        const entitiesCount = this.db.prepare('SELECT COUNT(*) as count FROM entities').get().count;
-        const categoriesCount = this.db.prepare('SELECT COUNT(*) as count FROM categories').get().count;
-
-        if (entitiesCount === 0) {
-            // Insertar entidades de ejemplo
-            const insertEntity = this.db.prepare(`
-                INSERT INTO entities (name, type, contact_email, contact_phone, address) 
-                VALUES (?, ?, ?, ?, ?)
-            `);
-
-            const entities = [
-                ['Alcaldía de Tunja', 'Municipal', 'alcaldia@tunja.gov.co', '3001234567', 'Plaza de Bolívar'],
-                ['Gobernación de Boyacá', 'Departamental', 'info@boyaca.gov.co', '3007654321', 'Carrera 10 No. 18-35'],
-                ['UPTC', 'Educativa', 'rectoria@uptc.edu.co', '3009876543', 'Avenida Central del Norte'],
-                ['Hospital San Rafael', 'Salud', 'info@hsr.gov.co', '3005551234', 'Calle 15 No. 10-50'],
-                ['Policía Nacional', 'Seguridad', 'policia@gov.co', '3008887777', 'Carrera 9 No. 20-40']
-            ];
-
-            entities.forEach(entity => insertEntity.run(...entity));
-        }
-
-        if (categoriesCount === 0) {
-            // Insertar categorías de ejemplo
-            const insertCategory = this.db.prepare(`
-                INSERT INTO categories (name, description) 
-                VALUES (?, ?)
-            `);
-
-            const categories = [
-                ['Servicios Públicos', 'Quejas relacionadas con agua, luz, gas, etc.'],
-                ['Vías y Transporte', 'Problemas de infraestructura vial y transporte público'],
-                ['Seguridad', 'Temas de seguridad ciudadana y orden público'],
-                ['Salud', 'Servicios de salud pública y hospitales'],
-                ['Educación', 'Instituciones educativas y servicios académicos'],
-                ['Medio Ambiente', 'Contaminación y cuidado ambiental'],
-                ['Atención al Ciudadano', 'Calidad en la atención y trámites']
-            ];
-
-            categories.forEach(category => insertCategory.run(...category));
-        }
-    }
-
-    // Métodos para operaciones CRUD de quejas
-    getAllComplaints() {
-        return this.db.prepare('SELECT * FROM complaints ORDER BY created_at DESC').all();
-    }
-
-    getComplaintById(id) {
-        return this.db.prepare('SELECT * FROM complaints WHERE id = ?').get(id);
-    }
-
-    createComplaint(complaint) {
-        const stmt = this.db.prepare(`
-            INSERT INTO complaints (title, description, entity, category, citizen_name, citizen_email, citizen_phone)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `);
-        return stmt.run(
-            complaint.title,
-            complaint.description,
-            complaint.entity,
-            complaint.category,
-            complaint.citizen_name,
-            complaint.citizen_email,
-            complaint.citizen_phone
-        );
-    }
-
-    updateComplaint(id, complaint) {
-        const stmt = this.db.prepare(`
-            UPDATE complaints 
-            SET title = ?, description = ?, entity = ?, category = ?, 
-                citizen_name = ?, citizen_email = ?, citizen_phone = ?, 
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        `);
-        return stmt.run(
-            complaint.title,
-            complaint.description,
-            complaint.entity,
-            complaint.category,
-            complaint.citizen_name,
-            complaint.citizen_email,
-            complaint.citizen_phone,
-            id
-        );
-    }
-
-    updateComplaintStatus(id, status) {
-        const stmt = this.db.prepare(`
-            UPDATE complaints 
-            SET status = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        `);
-        return stmt.run(status, id);
-    }
-
-    deleteComplaint(id) {
-        return this.db.prepare('DELETE FROM complaints WHERE id = ?').run(id);
-    }
-
-    // Métodos para entidades
-    getAllEntities() {
-        return this.db.prepare('SELECT * FROM entities ORDER BY name').all();
-    }
-
-    // Métodos para categorías
-    getAllCategories() {
-        return this.db.prepare('SELECT * FROM categories ORDER BY name').all();
-    }
-
-    // Métodos para reportes
-    getComplaintsByStatus() {
-        return this.db.prepare(`
-            SELECT status, COUNT(*) as count 
-            FROM complaints 
-            GROUP BY status
-        `).all();
-    }
-
-    getComplaintsByEntity() {
-        return this.db.prepare(`
-            SELECT entity, COUNT(*) as count 
-            FROM complaints 
-            GROUP BY entity 
-            ORDER BY count DESC
-        `).all();
-    }
-
-    getComplaintsByCategory() {
-        return this.db.prepare(`
-            SELECT category, COUNT(*) as count 
-            FROM complaints 
-            GROUP BY category 
-            ORDER BY count DESC
-        `).all();
-    }
-
-    getComplaintsByMonth() {
-        return this.db.prepare(`
-            SELECT 
-                strftime('%Y-%m', created_at) as month,
-                COUNT(*) as count 
-            FROM complaints 
-            GROUP BY strftime('%Y-%m', created_at)
-            ORDER BY month DESC
-        `).all();
-    }
-
-    // Cerrar conexión
-    close() {
-        if (this.db) {
-            this.db.close();
-        }
+    // Verificar si la conexión está activa
+    isConnected() {
+        return this.connection !== null;
     }
 }
 

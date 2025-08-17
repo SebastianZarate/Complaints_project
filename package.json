@@ -1,52 +1,41 @@
 {
-  "name": "complaints-boyaca",
+  "name": "sistema-quejas-boyaca",
   "version": "1.0.0",
-  "description": "Sistema de registro de quejas para entidades públicas de Boyacá",
+  "description": "Sistema de gestión de quejas para entidades públicas de Boyacá",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
     "init-db": "node scripts/init-db.js",
+    "health-check": "node scripts/health-check.js",
     "clean": "node scripts/clean.js",
-    "reset-db": "npm run clean && npm run init-db",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "health": "node scripts/health-check.js",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "test:coverage": "jest --coverage"
   },
   "keywords": [
-    "complaints",
+    "quejas",
     "boyaca",
-    "government",
-    "public-entities",
-    "nodejs",
-    "express"
+    "gobierno",
+    "ciudadanos",
+    "mysql"
   ],
   "author": "Tu Nombre",
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^12.2.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "express": "^4.21.2",
-    "express-rate-limit": "^7.5.1",
-    "helmet": "^7.2.0",
-    "sqlite3": "^5.1.6"
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.0.1",
+    "helmet": "^7.0.0",
+    "mysql2": "^3.6.0"
   },
   "devDependencies": {
-    "eslint": "^8.55.0",
     "jest": "^29.7.0",
-    "nodemon": "^3.0.2",
+    "nodemon": "^3.0.1",
     "supertest": "^6.3.3"
   },
   "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=8.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/SebastianZarate/Complaints_project.git"
+    "node": ">=16.0.0"
   }
 }
