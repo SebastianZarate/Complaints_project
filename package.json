@@ -1,26 +1,46 @@
 {
   "name": "sistema-quejas-boyaca",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Sistema de gestión de quejas para entidades públicas de Boyacá",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:production": "node server.production.js",
     "dev": "nodemon server.js",
     "init-db": "node scripts/init-db.js",
     "health-check": "node scripts/health-check.js",
     "clean": "node scripts/clean.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "docker:build": "docker build -t sistema-quejas-boyaca .",
+    "docker:run": "docker run -p 3000:3000 sistema-quejas-boyaca",
+    "docker:compose:up": "docker-compose up -d",
+    "docker:compose:down": "docker-compose down",
+    "docker:compose:logs": "docker-compose logs -f",
+    "deploy:local": "chmod +x deploy.sh && ./deploy.sh",
+    "deploy:production": "NODE_ENV=production npm run start:production",
+    "backup:db": "docker exec quejas-boyaca-mysql mysqldump -u root -p$MYSQL_ROOT_PASSWORD complaints_boyaca > backup_$(date +%Y%m%d_%H%M%S).sql",
+    "logs:app": "docker-compose logs -f app",
+    "logs:db": "docker-compose logs -f mysql",
+    "logs:nginx": "docker-compose logs -f nginx",
+    "status": "docker-compose ps",
+    "restart": "docker-compose restart",
+    "build:frontend": "echo 'Frontend build completed'",
+    "lint": "eslint src/ --fix",
+    "format": "prettier --write src/"
   },
   "keywords": [
     "quejas",
     "boyaca",
     "gobierno",
     "ciudadanos",
-    "mysql"
+    "mysql",
+    "express",
+    "docker",
+    "nginx"
   ],
-  "author": "Tu Nombre",
+  "author": "Gobierno de Boyacá",
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
@@ -28,14 +48,90 @@
     "express": "^4.18.2",
     "express-rate-limit": "^8.0.1",
     "helmet": "^7.0.0",
-    "mysql2": "^3.6.0"
+    "mysql2": "^3.6.0",
+    "compression": "^1.7.4"
   },
   "devDependencies": {
     "jest": "^29.7.0",
     "nodemon": "^3.0.1",
-    "supertest": "^6.3.3"
+    "supertest": "^6.3.3",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.0"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/sistema-quejas-boyaca.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tu-usuario/sistema-quejas-boyaca/issues"
+  },
+  "homepage": "https://github.com/tu-usuario/sistema-quejas-boyaca#readme",
+  "os": [
+    "linux",
+    "darwin",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "preferGlobal": false,
+  "private": false,
+  "config": {
+    "port": 3000,
+    "database": "complaints_boyaca"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "logs/",
+      "data/",
+      "node_modules/",
+      "coverage/",
+      "*.log"
+    ],
+    "env": {
+      "NODE_ENV": "development"
+    }
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/**/*.test.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ]
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true,
+      "es2021": true
+    },
+    "extends": [
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 12,
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-console": "off",
+      "no-unused-vars": "warn"
+    }
+  },
+  "prettier": {
+    "semi": true,
+    "trailingComma": "es5",
+    "singleQuote": true,
+    "printWidth": 100,
+    "tabWidth": 2
   }
 }
