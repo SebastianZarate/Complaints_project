@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Dropdown from '../components/Dropdown';
+import MathCaptcha from '../components/MathCaptcha';
 
 const ConsultComplaints = () => {
   const navigate = useNavigate();
   const [entities, setEntities] = useState([]);
   const [selectedEntity, setSelectedEntity] = useState(null);
+  const [captchaValid, setCaptchaValid] = useState(false);
+  const [captchaReset, setCaptchaReset] = useState(0);
 
   useEffect(() => {
     // Fetch entities from the API
@@ -31,7 +34,14 @@ const ConsultComplaints = () => {
   }, []);
 
   const handleConsult = () => {
+    if (!captchaValid) {
+      console.log('Por favor, resuelve el captcha antes de continuar.');
+      return;
+    }
+
     if (selectedEntity) {
+      // Reset captcha after successful consultation
+      setCaptchaReset(prev => prev + 1);
       navigate(`/quejas/${selectedEntity.id}`);
     }
   };
@@ -54,11 +64,17 @@ const ConsultComplaints = () => {
         })
       ),
       
+      React.createElement(MathCaptcha, {
+        onValidate: setCaptchaValid,
+        isValid: captchaValid,
+        resetTrigger: captchaReset
+      }),
+      
       React.createElement('div', { className: 'button-group' },
         React.createElement('button', {
           className: 'btn btn-primary',
           onClick: handleConsult,
-          disabled: !selectedEntity
+          disabled: !selectedEntity || !captchaValid
         }, 'Consultar')
       )
     )
