@@ -16,9 +16,7 @@ app.use(helmet({
 
 // Configuración de CORS
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' ? 
-        ['https://yourdomain.com'] : // Cambiar por tu dominio en producción
-        ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: true, // Permite cualquier origen en desarrollo
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -36,7 +34,7 @@ app.use(express.urlencoded({
 }));
 
 // Middleware para obtener IP real del cliente
-app.set('trust proxy', true);
+// app.set('trust proxy', true); // Comentado temporalmente para evitar conflicto con rate limiting
 
 // Middleware para agregar headers de seguridad adicionales
 app.use((req, res, next) => {

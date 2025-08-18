@@ -63,16 +63,7 @@ class ComplaintsController {
             errors.push('La descripción no puede exceder 5000 caracteres');
         }
 
-        // Validar contenido spam
-        const spamKeywords = ['viagra', 'casino', 'lottery', 'winner', 'click here', 'free money'];
-        const content = data.descripcion.toLowerCase();
-        
-        for (const keyword of spamKeywords) {
-            if (content.includes(keyword)) {
-                errors.push('El contenido contiene palabras no permitidas');
-                break;
-            }
-        }
+        // Filtro de spam eliminado - ahora acepta cualquier contenido
 
         return errors;
     }
@@ -489,6 +480,32 @@ class ComplaintsController {
             res.status(500).json({
                 success: false,
                 message: 'Error obteniendo estadísticas',
+                error: error.message
+            });
+        }
+    }
+
+    async getReportes(req, res) {
+        try {
+            const startTime = Date.now();
+            await this.db.init();
+
+            // Obtener todas las entidades con el número de quejas
+            const reportes = await this.db.getQuejasPorEntidad();
+
+            res.json({
+                success: true,
+                data: reportes,
+                count: reportes.length,
+                timestamp: new Date().toISOString(),
+                responseTime: Date.now() - startTime
+            });
+
+        } catch (error) {
+            console.error('Error obteniendo reportes:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error obteniendo reportes',
                 error: error.message
             });
         }

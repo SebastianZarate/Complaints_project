@@ -172,16 +172,16 @@ class DatabaseManager {
                 console.log('📝 Insertando datos iniciales de entidades...');
                 
                 const entidades = [
+                    ['CORPOBOYACA', 'Corporación Autónoma Regional de Boyacá', 'quejas@corpoboyaca.gov.co', '+57 8 740 7476', 'Tunja, Boyacá', true],
+                    ['Lotería de Boyacá', 'Empresa de Lotería de Boyacá', 'atencion@loteriadeboyaca.gov.co', '+57 8 742 4949', 'Tunja, Boyacá', true],
+                    ['EBSA', 'Electrificadora de Boyacá S.A. E.S.P.', 'atencion@ebsa.com.co', '+57 8 745 6000', 'Tunja, Boyacá', true],
+                    ['ITBOY', 'Instituto de Tránsito de Boyacá', 'contacto@itboy.gov.co', '+57 8 742 7070', 'Tunja, Boyacá', true],
+                    ['INDEPORTES', 'Instituto Departamental de Deportes de Boyacá', 'info@indeportesboyaca.gov.co', '+57 8 740 8080', 'Tunja, Boyacá', true],
                     ['Alcaldía Municipal', 'Administración municipal principal', 'quejas@alcaldia.gov.co', '+57 1 234 5678', 'Carrera 10 #15-20, Centro', true],
                     ['Secretaría de Salud', 'Gestión de servicios de salud municipal', 'salud@alcaldia.gov.co', '+57 1 234 5679', 'Carrera 8 #12-15, Centro', true],
                     ['Secretaría de Educación', 'Administración del sistema educativo local', 'educacion@alcaldia.gov.co', '+57 1 234 5680', 'Calle 19 #9-45, Centro', true],
                     ['Secretaría de Tránsito', 'Control y regulación del tránsito vehicular', 'transito@alcaldia.gov.co', '+57 1 234 5681', 'Avenida Norte #25-30', true],
-                    ['Empresas Públicas', 'Servicios públicos domiciliarios', 'atencion@empresaspublicas.gov.co', '+57 1 234 5682', 'Carrera 15 #20-10, Industrial', true],
-                    ['Registro Civil', 'Servicios de identificación y registro civil', 'registro@registraduria.gov.co', '+57 1 234 5683', 'Plaza Principal, Edificio Gobierno', true],
-                    ['Policía Nacional', 'Seguridad ciudadana y orden público', 'quejas@policia.gov.co', '+57 1 234 5684', 'Carrera 12 #18-25, Centro', true],
-                    ['Secretaría de Obras Públicas', 'Infraestructura y obras municipales', 'obras@alcaldia.gov.co', '+57 1 234 5685', 'Calle 22 #14-30, Norte', true],
-                    ['Secretaría de Gobierno', 'Administración y gobierno municipal', 'gobierno@alcaldia.gov.co', '+57 1 234 5686', 'Palacio Municipal, Centro', true],
-                    ['ICBF - Instituto Colombiano de Bienestar Familiar', 'Protección a la familia y menores de edad', 'atencion@icbf.gov.co', '+57 1 234 5687', 'Barrio San Rafael, Calle 45 #8-12', true]
+                    ['Empresas Públicas', 'Servicios públicos domiciliarios', 'atencion@empresaspublicas.gov.co', '+57 1 234 5682', 'Carrera 15 #20-10, Industrial', true]
                 ];
 
                 const insertQuery = `
@@ -477,9 +477,9 @@ class DatabaseManager {
             const [result] = await this.connection.execute(`
                 SELECT 
                     DATABASE() as current_database,
-                    USER() as current_user,
+                    USER() as db_user,
                     VERSION() as mysql_version,
-                    NOW() as current_time
+                    NOW() as server_time
             `);
             return result[0];
         } catch (error) {

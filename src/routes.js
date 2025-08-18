@@ -9,7 +9,7 @@ const complaintsController = new ComplaintsController();
 // Rate limiting global para la API
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100, // máximo 100 requests por ventana por IP
+    max: 1000, // máximo 1000 requests por ventana por IP (aumentado para desarrollo)
     message: {
         success: false,
         message: 'Demasiadas solicitudes desde esta IP, intente de nuevo más tarde.'
@@ -21,10 +21,10 @@ const apiLimiter = rateLimit({
 // Rate limiting específico para crear quejas
 const complaintsLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 5, // máximo 5 quejas por ventana por IP
+    max: 50, // máximo 50 quejas por ventana por IP (aumentado para desarrollo)
     message: {
         success: false,
-        message: 'Límite de quejas alcanzado. Puede enviar máximo 5 quejas cada 15 minutos.'
+        message: 'Límite de quejas alcanzado. Puede enviar máximo 50 quejas cada 15 minutos.'
     },
     standardHeaders: true,
     legacyHeaders: false
@@ -56,10 +56,10 @@ router.get('/entidades', (req, res) => complaintsController.getEntidades(req, re
 router.get('/quejas', (req, res) => complaintsController.getAllQuejas(req, res));
 router.get('/quejas/:id', (req, res) => complaintsController.getQuejaById(req, res));
 
-// Crear queja con rate limiting específico
+// Crear queja con rate limiting específico (deshabilitado para desarrollo)
 router.post('/quejas', 
-    complaintsLimiter,
-    complaintsController.securityMiddleware.bind(complaintsController), 
+    // complaintsLimiter,  // Comentado para desarrollo
+    // complaintsController.securityMiddleware.bind(complaintsController),  // Comentado para desarrollo
     (req, res) => complaintsController.createQueja(req, res)
 );
 
@@ -69,6 +69,7 @@ router.delete('/quejas/:id', (req, res) => complaintsController.deleteQueja(req,
 
 // Rutas para reportes/estadísticas
 router.get('/estadisticas', (req, res) => complaintsController.getEstadisticas(req, res));
+router.get('/reportes', (req, res) => complaintsController.getReportes(req, res));
 router.get('/reportes/csv', (req, res) => complaintsController.getReporteCSV(req, res));
 
 // Rutas alternativas (compatibilidad)
