@@ -68,6 +68,12 @@ npm start
 
 ## 🐳 Instalación con Docker (**RECOMENDADO**)
 
+## Generar certificados SSL
+
+Ejecuta el siguiente comando para generar los certificados SSL en la carpeta `ssl` existente:
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ssl/key.pem -out ssl/cert.pem -subj "/C=CO/ST=Boyaca/L=Tunja/O=QuejasApp/CN=localhost"
+
 ### Construir la imagen y levantar contenedores
 docker-compose up -d --build
 
@@ -84,6 +90,7 @@ npm run dev
 
 ### 4. Verificar funcionamiento
 npm run health-check
+
 
 
 
