@@ -13,6 +13,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:funcionalidades": "jest tests/funcionalidades.test.js --verbose",
+    "test:funcionalidades:watch": "jest tests/funcionalidades.test.js --watch --verbose",
     "docker:build": "docker build -t sistema-quejas-boyaca .",
     "docker:run": "docker run -p 3000:3000 sistema-quejas-boyaca",
     "docker:compose:up": "docker-compose up -d",
@@ -97,23 +99,11 @@
       "NODE_ENV": "development"
     }
   },
-  "jest": {
-    "testEnvironment": "node",
-    "collectCoverageFrom": [
-      "src/**/*.js",
-      "!src/**/*.test.js"
-    ],
-    "coverageDirectory": "coverage",
-    "coverageReporters": [
-      "text",
-      "lcov",
-      "html"
-    ]
-  },
   "eslintConfig": {
     "env": {
       "node": true,
-      "es2021": true
+      "es2021": true,
+      "jest": true
     },
     "extends": [
       "eslint:recommended"

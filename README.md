@@ -91,6 +91,51 @@ npm run dev
 ### 4. Verificar funcionamiento
 npm run health-check
 
+## 🎯 Funcionalidades Testadas
+
+### 1. **CONSULTAR QUEJAS**
+- ✅ Obtener todas las quejas
+- ✅ Consultar quejas por entidad específica
+- ✅ Manejar consulta de queja inexistente
+- ✅ Obtener lista de entidades disponibles
+
+### 2. **ESCRIBIR QUEJAS**
+- ✅ Crear nueva queja exitosamente
+- ✅ Validar campos requeridos
+- ✅ Validar longitud mínima de descripción (20 caracteres)
+- ✅ Validar entidad existente
+- ✅ Verificar que la queja creada se puede consultar
+
+### 3. **GENERACIÓN DE REPORTES**
+- ✅ Generar reporte de quejas por entidad
+- ✅ Generar reporte CSV descargable
+- ✅ Verificar rendimiento de generación de reportes
+
+## 📋 Requisitos Previos
+
+1. **Base de datos disponible**: Asegúrate de que MySQL esté corriendo
+   ```powershell
+   # Verificar contenedores Docker
+   docker-compose ps
+   
+   # Si no están corriendo, levantarlos
+   docker-compose up -d
+   ```
+
+2. **Dependencias instaladas**:
+   ```powershell
+   npm install
+   ```
+
+3. **Variables de entorno configuradas**: El archivo `.env` debe tener las configuraciones de base de datos
+
+## 🚀 Comandos para Ejecutar Tests
+
+```powershell
+npm run test:funcionalidades
+```
+
+
 
 
 
