@@ -13,9 +13,12 @@ class DatabaseManager {
             charset: 'utf8mb4',
             timezone: 'Z',
             multipleStatements: true,
-            // Configuraciones válidas para mysql2
             connectTimeout: 60000,
-            dateStrings: true
+            dateStrings: true,
+            // Configuraciones adicionales para estabilidad
+            acquireTimeout: 60000,
+            timeout: 60000,
+            reconnect: true
         };
     }
 
@@ -25,6 +28,16 @@ class DatabaseManager {
             console.log(`   Host: ${this.config.host}:${this.config.port}`);
             console.log(`   Base de datos: ${this.config.database}`);
             console.log(`   Usuario: ${this.config.user}`);
+            
+            // Si ya hay una conexión, cerrarla primero
+            if (this.connection) {
+                try {
+                    await this.connection.end();
+                } catch (e) {
+                    // Ignorar errores al cerrar conexión previa
+                }
+                this.connection = null;
+            }
             
             // Intentar conectar directamente a la base de datos
             try {
@@ -48,8 +61,13 @@ class DatabaseManager {
             
             if (error.code === 'ER_ACCESS_DENIED_ERROR') {
                 console.error('❌ Error de acceso: Verifica las credenciales de MySQL en el archivo .env');
+                console.error('💡 Sugerencia: Ejecuta el script fix-database.js para arreglar permisos');
             } else if (error.code === 'ECONNREFUSED') {
                 console.error('❌ Error de conexión: Verifica que MySQL esté ejecutándose');
+                console.error('💡 Sugerencia: docker-compose ps para verificar contenedores');
+            } else if (error.code === 'ENOTFOUND') {
+                console.error('❌ Host no encontrado: Verifica la configuración de DB_HOST');
+                console.error('💡 Sugerencia: Usa "localhost" para conexión externa o "mysql" para Docker interno');
             }
             
             throw error;
@@ -79,7 +97,11 @@ class DatabaseManager {
             
         } catch (error) {
             if (tempConnection) {
-                await tempConnection.end();
+                try {
+                    await tempConnection.end();
+                } catch (e) {
+                    // Ignorar errores al cerrar
+                }
             }
             console.error('❌ Error creando la base de datos:', error);
             throw error;
@@ -205,6 +227,8 @@ class DatabaseManager {
 
     async getAllQuejas() {
         try {
+            await this.ensureConnection();
+            
             const [rows] = await this.connection.execute(`
                 SELECT 
                     q.id,
@@ -227,6 +251,8 @@ class DatabaseManager {
 
     async getQuejaById(id) {
         try {
+            await this.ensureConnection();
+            
             const [rows] = await this.connection.execute(`
                 SELECT 
                     q.id,
@@ -254,6 +280,14 @@ class DatabaseManager {
 
     async createQueja(queja) {
         try {
+            await this.ensureConnection();
+            
+            console.log('📝 Insertando nueva queja:', {
+                entidad_id: queja.entidad_id,
+                descripcion: queja.descripcion.substring(0, 50) + '...',
+                ip_origen: queja.ip_origen
+            });
+            
             const [result] = await this.connection.execute(`
                 INSERT INTO quejas (entidad_id, descripcion, ip_origen, user_agent)
                 VALUES (?, ?, ?, ?)
@@ -264,15 +298,37 @@ class DatabaseManager {
                 queja.user_agent || null
             ]);
             
+            console.log(`✅ Queja insertada con ID: ${result.insertId}`);
+            
+            // Verificar que se insertó correctamente
+            const [verification] = await this.connection.execute(
+                'SELECT id, estado, created_at FROM quejas WHERE id = ?', 
+                [result.insertId]
+            );
+            
+            if (verification.length > 0) {
+                console.log('✅ Queja verificada en base de datos');
+            } else {
+                console.error('❌ Error: Queja no encontrada después de inserción');
+            }
+            
             return { insertId: result.insertId };
         } catch (error) {
-            console.error('Error creando queja:', error);
+            console.error('❌ Error creando queja:', error);
+            console.error('Detalles:', {
+                entidad_id: queja.entidad_id,
+                descripcion_length: queja.descripcion?.length,
+                error_code: error.code,
+                error_message: error.message
+            });
             throw error;
         }
     }
 
     async updateQuejaStatus(id, estado) {
         try {
+            await this.ensureConnection();
+            
             const [result] = await this.connection.execute(`
                 UPDATE quejas 
                 SET estado = ?, updated_at = CURRENT_TIMESTAMP
@@ -288,6 +344,8 @@ class DatabaseManager {
 
     async deleteQueja(id) {
         try {
+            await this.ensureConnection();
+            
             const [result] = await this.connection.execute(
                 'DELETE FROM quejas WHERE id = ?', 
                 [id]
@@ -302,6 +360,8 @@ class DatabaseManager {
 
     async getQuejasByEntidad(entidadId) {
         try {
+            await this.ensureConnection();
+            
             const [rows] = await this.connection.execute(`
                 SELECT 
                     q.id,
@@ -328,6 +388,8 @@ class DatabaseManager {
 
     async getAllEntidades() {
         try {
+            await this.ensureConnection();
+            
             const [rows] = await this.connection.execute(`
                 SELECT * FROM entidades 
                 WHERE activo = TRUE 
@@ -342,6 +404,8 @@ class DatabaseManager {
 
     async getEntidadById(id) {
         try {
+            await this.ensureConnection();
+            
             const [rows] = await this.connection.execute(
                 'SELECT * FROM entidades WHERE id = ?', 
                 [id]
@@ -356,6 +420,8 @@ class DatabaseManager {
 
     async getEntidadByNombre(nombre) {
         try {
+            await this.ensureConnection();
+            
             const [rows] = await this.connection.execute(`
                 SELECT * FROM entidades 
                 WHERE nombre LIKE ? AND activo = TRUE
@@ -373,6 +439,8 @@ class DatabaseManager {
 
     async getQuejasPorEstado() {
         try {
+            await this.ensureConnection();
+            
             const [rows] = await this.connection.execute(`
                 SELECT estado, COUNT(*) as count 
                 FROM quejas 
@@ -388,6 +456,8 @@ class DatabaseManager {
 
     async getQuejasPorEntidad() {
         try {
+            await this.ensureConnection();
+            
             const [rows] = await this.connection.execute(`
                 SELECT 
                     e.id,
@@ -408,6 +478,8 @@ class DatabaseManager {
 
     async getQuejasPorMes(limite = 12) {
         try {
+            await this.ensureConnection();
+            
             const [rows] = await this.connection.execute(`
                 SELECT 
                     DATE_FORMAT(created_at, '%Y-%m') as mes,
@@ -426,6 +498,8 @@ class DatabaseManager {
 
     async getEstadisticasGenerales() {
         try {
+            await this.ensureConnection();
+            
             const [totalQuejas] = await this.connection.execute(
                 'SELECT COUNT(*) as total FROM quejas'
             );
@@ -461,8 +535,23 @@ class DatabaseManager {
 
     // ==================== MÉTODOS UTILITARIOS ====================
 
+    async ensureConnection() {
+        if (!this.connection) {
+            console.log('🔄 Conexión perdida, reconectando...');
+            await this.init();
+        }
+        
+        try {
+            await this.connection.ping();
+        } catch (error) {
+            console.log('🔄 Conexión inactiva, reconectando...');
+            await this.init();
+        }
+    }
+
     async healthCheck() {
         try {
+            await this.ensureConnection();
             await this.connection.ping();
             const [result] = await this.connection.execute('SELECT 1 as test');
             return result[0].test === 1;
@@ -474,6 +563,8 @@ class DatabaseManager {
 
     async getConnectionInfo() {
         try {
+            await this.ensureConnection();
+            
             const [result] = await this.connection.execute(`
                 SELECT 
                     DATABASE() as current_database,
@@ -490,6 +581,8 @@ class DatabaseManager {
 
     async executeQuery(query, params = []) {
         try {
+            await this.ensureConnection();
+            
             const [rows] = await this.connection.execute(query, params);
             return rows;
         } catch (error) {
@@ -503,7 +596,11 @@ class DatabaseManager {
     async reconnect() {
         try {
             if (this.connection) {
-                await this.connection.end();
+                try {
+                    await this.connection.end();
+                } catch (e) {
+                    // Ignorar errores al cerrar conexión previa
+                }
             }
             await this.init();
             console.log('✅ Reconexión exitosa');
