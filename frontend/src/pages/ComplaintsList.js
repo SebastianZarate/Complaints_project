@@ -7,7 +7,7 @@ const ComplaintsList = () => {
 
   useEffect(() => {
     // Fetch complaints for the specific entity
-    fetch(`http://localhost:3002/api/quejas/entidad/${entidadId}`)
+    fetch(`${process.env.REACT_APP_API_URL}/api/quejas/entidad/${entidadId}`)
       .then(response => response.json())
       .then(data => {
         if (data.success) {

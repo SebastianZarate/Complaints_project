@@ -12,7 +12,7 @@ const ConsultComplaints = () => {
 
   useEffect(() => {
     // Fetch entities from the API
-    fetch('http://localhost:3002/api/entidades')
+    fetch(`${process.env.REACT_APP_API_URL}/api/entidades`)
       .then(response => response.json())
       .then(data => {
         if (data.success) {

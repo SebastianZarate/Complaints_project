@@ -10,7 +10,7 @@ const Reports = () => {
     // Only fetch reports if captcha is valid and showReports is true
     if (captchaValid && showReports) {
       // Fetch reports data
-      fetch('http://localhost:3002/api/reportes')
+      fetch(`${process.env.REACT_APP_API_URL}/api/reportes`)
         .then(response => response.json())
         .then(data => {
           console.log('Reports data received:', data);

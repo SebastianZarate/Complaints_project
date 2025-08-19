@@ -11,6 +11,7 @@ class DatabaseManager {
             password: process.env.DB_PASSWORD || '',
             database: process.env.DB_NAME || 'complaints_boyaca',
             charset: 'utf8mb4',
+            collation: 'utf8mb4_unicode_ci',
             timezone: 'Z',
             multipleStatements: true,
             connectTimeout: 60000,
@@ -43,6 +44,11 @@ class DatabaseManager {
             try {
                 this.connection = await mysql.createConnection(this.config);
                 await this.connection.ping();
+                
+                // Establecer codificación UTF-8
+                await this.connection.execute('SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci');
+                await this.connection.execute('SET CHARACTER SET utf8mb4');
+                
                 console.log('✅ Conexión a MySQL establecida correctamente');
             } catch (error) {
                 if (error.code === 'ER_BAD_DB_ERROR') {

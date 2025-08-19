@@ -28,7 +28,7 @@ const WriteComplaint = () => {
 
   useEffect(() => {
     // Fetch entities from the API
-    fetch('http://localhost:3002/api/entidades')
+    fetch(`${process.env.REACT_APP_API_URL}/api/entidades`)
       .then(response => response.json())
       .then(data => {
         if (data.success) {
@@ -83,7 +83,7 @@ const WriteComplaint = () => {
       descripcion: complaintText.trim()
     };
 
-    fetch('http://localhost:3002/api/quejas', {
+    fetch(`${process.env.REACT_APP_API_URL}/api/quejas`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
