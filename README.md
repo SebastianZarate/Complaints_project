@@ -134,8 +134,3 @@ npm run health-check
 ```powershell
 npm run test:funcionalidades
 ```
-
-
-
-
-
