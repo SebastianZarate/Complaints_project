@@ -3,16 +3,15 @@ import React from 'react';
 const Home = () => {
   return React.createElement('div', { className: 'page-container' },
     React.createElement('div', { className: 'home-container' },
-      React.createElement('div', { 
-        className: 'home-wallpaper',
+      React.createElement('img', { 
+        src: '/resources/wallpaper.png',
+        alt: 'Logo Quejas Boyacá',
+        className: 'home-wallpaper-img',
         style: {
-          backgroundImage: 'url(/resources/wallpaper.png)',
-          backgroundSize: 'contain',
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'center',
-          width: '100%',
-          height: '60vh',
-          minHeight: '400px'
+          maxWidth: '100%',
+          maxHeight: '60vh',
+          height: 'auto',
+          objectFit: 'contain'
         }
       })
     )

@@ -25,11 +25,6 @@ class DatabaseManager {
 
     async init() {
         try {
-            console.log('🔧 Conectando a MySQL...');
-            console.log(`   Host: ${this.config.host}:${this.config.port}`);
-            console.log(`   Base de datos: ${this.config.database}`);
-            console.log(`   Usuario: ${this.config.user}`);
-            
             // Si ya hay una conexión, cerrarla primero
             if (this.connection) {
                 try {
@@ -49,10 +44,8 @@ class DatabaseManager {
                 await this.connection.execute('SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci');
                 await this.connection.execute('SET CHARACTER SET utf8mb4');
                 
-                console.log('✅ Conexión a MySQL establecida correctamente');
             } catch (error) {
                 if (error.code === 'ER_BAD_DB_ERROR') {
-                    console.log('🔄 Base de datos no existe, creándola...');
                     await this.createDatabase();
                 } else {
                     throw error;
@@ -94,7 +87,6 @@ class DatabaseManager {
                 `CREATE DATABASE IF NOT EXISTS ${this.config.database} 
                  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
             );
-            console.log('✅ Base de datos creada exitosamente');
             
             await tempConnection.end();
             
@@ -128,10 +120,8 @@ class DatabaseManager {
             const needsQuejas = !existingTables.includes('quejas');
 
             if (needsEntidades || needsQuejas) {
-                console.log('📝 Creando tablas faltantes...');
                 await this.createTables();
             } else {
-                console.log('✅ Todas las tablas existen');
                 // Verificar si necesita datos iniciales
                 await this.insertInitialDataIfNeeded();
             }
@@ -159,7 +149,6 @@ class DatabaseManager {
                     INDEX idx_activo (activo)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             `);
-            console.log('✅ Tabla "entidades" creada');
 
             // Crear tabla de quejas
             await this.connection.execute(`
@@ -178,7 +167,6 @@ class DatabaseManager {
                     INDEX idx_created_at (created_at)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             `);
-            console.log('✅ Tabla "quejas" creada');
 
             // Insertar datos iniciales
             await this.insertInitialDataIfNeeded();
@@ -197,7 +185,6 @@ class DatabaseManager {
             );
             
             if (existingEntities[0].count === 0) {
-                console.log('📝 Insertando datos iniciales de entidades...');
                 
                 const entidades = [
                     ['CORPOBOYACA', 'Corporación Autónoma Regional de Boyacá', 'quejas@corpoboyaca.gov.co', '+57 8 740 7476', 'Tunja, Boyacá', true],
@@ -220,8 +207,6 @@ class DatabaseManager {
                 for (const entidad of entidades) {
                     await this.connection.execute(insertQuery, entidad);
                 }
-
-                console.log(`✅ ${entidades.length} entidades insertadas exitosamente`);
             }
         } catch (error) {
             console.error('❌ Error insertando datos iniciales:', error);
@@ -288,12 +273,6 @@ class DatabaseManager {
         try {
             await this.ensureConnection();
             
-            console.log('📝 Insertando nueva queja:', {
-                entidad_id: queja.entidad_id,
-                descripcion: queja.descripcion.substring(0, 50) + '...',
-                ip_origen: queja.ip_origen
-            });
-            
             const [result] = await this.connection.execute(`
                 INSERT INTO quejas (entidad_id, descripcion, ip_origen, user_agent)
                 VALUES (?, ?, ?, ?)
@@ -304,8 +283,6 @@ class DatabaseManager {
                 queja.user_agent || null
             ]);
             
-            console.log(`✅ Queja insertada con ID: ${result.insertId}`);
-            
             // Verificar que se insertó correctamente
             const [verification] = await this.connection.execute(
                 'SELECT id, estado, created_at FROM quejas WHERE id = ?', 
@@ -313,7 +290,10 @@ class DatabaseManager {
             );
             
             if (verification.length > 0) {
-                console.log('✅ Queja verificada en base de datos');
+                return {
+                    insertId: result.insertId,
+                    ...verification[0]
+                };
             } else {
                 console.error('❌ Error: Queja no encontrada después de inserción');
             }
@@ -543,14 +523,12 @@ class DatabaseManager {
 
     async ensureConnection() {
         if (!this.connection) {
-            console.log('🔄 Conexión perdida, reconectando...');
             await this.init();
         }
         
         try {
             await this.connection.ping();
         } catch (error) {
-            console.log('🔄 Conexión inactiva, reconectando...');
             await this.init();
         }
     }
@@ -609,7 +587,6 @@ class DatabaseManager {
                 }
             }
             await this.init();
-            console.log('✅ Reconexión exitosa');
         } catch (error) {
             console.error('❌ Error en reconexión:', error);
             throw error;
@@ -621,7 +598,6 @@ class DatabaseManager {
             try {
                 await this.connection.end();
                 this.connection = null;
-                console.log('📫 Conexión a MySQL cerrada correctamente');
             } catch (error) {
                 console.error('Error cerrando conexión:', error);
             }
