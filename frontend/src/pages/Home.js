@@ -1,15 +1,20 @@
 import React from 'react';
 
 const Home = () => {
-  return React.createElement('div', null,
-    React.createElement('h1', { className: 'page-title' },
-      'BIENVENIDO AL MENU DE',
-      React.createElement('br'),
-      'RESEÑAS DE LAS',
-      React.createElement('br'),
-      'ENTIDADES PUBLICAS DE',
-      React.createElement('br'),
-      'BOYACA'
+  return React.createElement('div', { className: 'page-container' },
+    React.createElement('div', { className: 'home-container' },
+      React.createElement('div', { 
+        className: 'home-wallpaper',
+        style: {
+          backgroundImage: 'url(/resources/wallpaper.png)',
+          backgroundSize: 'contain',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+          width: '100%',
+          height: '60vh',
+          minHeight: '400px'
+        }
+      })
     )
   );
 };

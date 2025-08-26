@@ -39,47 +39,36 @@ const Reports = () => {
     }
   };
 
-  return React.createElement('div', null,
+  return React.createElement('div', { className: 'page-container' },
     React.createElement('h1', { className: 'page-title' },
-      'BIENVENIDO AL MENU DE',
-      React.createElement('br'),
-      'RESEÑAS DE LAS',
-      React.createElement('br'),
-      'ENTIDADES PUBLICAS DE',
-      React.createElement('br'),
-      'BOYACA'
+      'Reporte numero de quejas'
     ),
     
     !showReports && React.createElement('div', { className: 'captcha-container' },
       React.createElement(MathCaptcha, {
         onValidate: handleCaptchaValidation,
         isValid: captchaValid,
-        resetTrigger: 0
+        resetTrigger: 0,
+        darkTheme: true
       }),
-      React.createElement('p', { style: { textAlign: 'center', marginTop: '10px', color: '#666' } },
+      React.createElement('p', { style: { textAlign: 'center', marginTop: '10px', color: 'white' } },
         'Resuelve el captcha para ver los reportes'
       )
     ),
     
     showReports && React.createElement('div', { className: 'reports-table' },
-      React.createElement('table', { className: 'table' },
+      React.createElement('table', null,
         React.createElement('thead', null,
           React.createElement('tr', null,
-            React.createElement('th', null, 'Entidad'),
-            React.createElement('th', null, 'Número de Quejas')
+            React.createElement('th', null, 'Entidades'),
+            React.createElement('th', null, 'N° Quejas')
           )
         ),
         React.createElement('tbody', null,
           reports.map((report, index) =>
             React.createElement('tr', { key: index },
-              React.createElement('td', null,
-                React.createElement('div', null, report.entidad)
-              ),
-              React.createElement('td', null,
-                React.createElement('span', { className: 'complaints-count' },
-                  report.count
-                )
-              )
+              React.createElement('td', null, report.entidad),
+              React.createElement('td', null, report.count)
             )
           )
         )

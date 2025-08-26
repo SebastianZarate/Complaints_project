@@ -1,37 +1,25 @@
-import React, { useState } from 'react';
+import React from 'react';
 
-const Dropdown = ({ options, selectedOption, onSelect, placeholder, displayKey = 'name' }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const handleToggle = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const handleSelect = (option) => {
-    onSelect(option);
-    setIsOpen(false);
-  };
-
+const Dropdown = ({ options, selectedOption, onSelect, placeholder, displayKey = 'name', disabled = false }) => {
   return React.createElement('div', { className: 'dropdown' },
-    React.createElement('button', {
-      className: 'dropdown-button',
-      onClick: handleToggle,
-      type: 'button'
+    React.createElement('select', {
+      className: 'form-select',
+      value: selectedOption ? selectedOption.id : '',
+      onChange: (e) => {
+        if (!disabled) {
+          const selected = options.find(opt => opt.id == e.target.value);
+          if (selected) {
+            onSelect(selected);
+          }
+        }
+      },
+      disabled: disabled
     },
-      React.createElement('span', null,
-        selectedOption ? selectedOption[displayKey] : placeholder
-      ),
-      React.createElement('div', {
-        className: `dropdown-arrow ${isOpen ? 'open' : ''}`
-      })
-    ),
-    
-    isOpen && React.createElement('div', { className: 'dropdown-menu' },
+      React.createElement('option', { value: '' }, placeholder),
       options.map((option) =>
-        React.createElement('div', {
+        React.createElement('option', {
           key: option.id,
-          className: 'dropdown-item',
-          onClick: () => handleSelect(option)
+          value: option.id
         }, option[displayKey])
       )
     )

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import Dropdown from '../components/Dropdown';
 
 const ComplaintsList = () => {
   const { entidadId } = useParams();
   const [complaints, setComplaints] = useState([]);
+  const [entityName, setEntityName] = useState('');
 
   useEffect(() => {
     // Fetch complaints for the specific entity
@@ -15,13 +17,38 @@ const ComplaintsList = () => {
         }
       })
       .catch(error => console.error('Error fetching complaints:', error));
+
+    // Fetch entity name
+    fetch(`${process.env.REACT_APP_API_URL}/api/entidades`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const entity = data.data.find(e => e.id == entidadId);
+          setEntityName(entity ? entity.nombre : 'Entidad desconocida');
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching entities:', error);
+        setEntityName('Entidad #' + entidadId);
+      });
   }, [entidadId]);
 
-  return React.createElement('div', null,
+  return React.createElement('div', { className: 'page-container' },
     React.createElement('h1', { className: 'page-title' },
-      'LISTADO QUEJAS ENTIDAD',
-      React.createElement('br'),
-      'CONSULTADA'
+      'Listado de quejas'
+    ),
+    
+    React.createElement('div', { className: 'form-container' },
+      React.createElement('div', { className: 'form-group' },
+        React.createElement(Dropdown, {
+          options: [{ id: entidadId, nombre: entityName }],
+          selectedOption: { id: entidadId, nombre: entityName },
+          onSelect: () => {},
+          placeholder: entityName,
+          displayKey: 'nombre',
+          disabled: true
+        })
+      )
     ),
     
     React.createElement('div', { className: 'complaints-list' },

@@ -46,37 +46,34 @@ const ConsultComplaints = () => {
     }
   };
 
-  return React.createElement('div', null,
+  return React.createElement('div', { className: 'page-container' },
     React.createElement('h1', { className: 'page-title' },
-      'SELECCIONE LA ENTIDAD A',
-      React.createElement('br'),
-      'CONSULTAR LAS QUEJAS'
+      'Seleccione la entidad a consultar las quejas'
     ),
     
-    React.createElement('div', { className: 'form-container' },
-      React.createElement('div', { className: 'form-group' },
-        React.createElement(Dropdown, {
-          options: entities,
-          selectedOption: selectedEntity,
-          onSelect: setSelectedEntity,
-          placeholder: 'Entidades',
-          displayKey: 'nombre'
-        })
-      ),
-      
-      React.createElement(MathCaptcha, {
-        onValidate: setCaptchaValid,
-        isValid: captchaValid,
-        resetTrigger: captchaReset
-      }),
-      
-      React.createElement('div', { className: 'button-group' },
-        React.createElement('button', {
-          className: 'btn btn-primary',
-          onClick: handleConsult,
-          disabled: !selectedEntity || !captchaValid
-        }, 'Consultar')
-      )
+    React.createElement('div', { className: 'form-group' },
+      React.createElement(Dropdown, {
+        options: entities,
+        selectedOption: selectedEntity,
+        onSelect: setSelectedEntity,
+        placeholder: 'Entidades',
+        displayKey: 'nombre'
+      })
+    ),
+    
+    React.createElement(MathCaptcha, {
+      onValidate: setCaptchaValid,
+      isValid: captchaValid,
+      resetTrigger: captchaReset,
+      darkTheme: true
+    }),
+    
+    React.createElement('div', { className: 'button-group' },
+      React.createElement('button', {
+        className: 'consult-button',
+        onClick: handleConsult,
+        disabled: !selectedEntity || !captchaValid
+      }, 'Consultar')
     )
   );
 };

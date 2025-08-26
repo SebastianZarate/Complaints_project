@@ -48,10 +48,6 @@ const WriteComplaint = () => {
       });
   }, []);
 
-  const handleCancel = () => {
-    navigate('/');
-  };
-
   const handleSave = () => {
     if (!captchaValid) {
       setMessage('Por favor, resuelve el captcha antes de continuar.');
@@ -118,32 +114,29 @@ const WriteComplaint = () => {
     });
   };
 
-  return React.createElement('div', null,
+  return React.createElement('div', { className: 'page-container' },
     React.createElement('h1', { className: 'page-title' },
-      'ESCRIBA LA QUEJA DE LA',
-      React.createElement('br'),
-      'ENTIDAD SELECCIONADA'
+      'Seleccione la entidad'
     ),
     
-    React.createElement('div', { className: 'form-container' },
-      React.createElement('div', { className: 'form-group' },
-        React.createElement(Dropdown, {
-          options: entities,
-          selectedOption: selectedEntity,
-          onSelect: setSelectedEntity,
-          placeholder: selectedEntity ? selectedEntity.nombre : 'Seleccione una entidad',
-          displayKey: 'nombre'
-        })
-      ),
-      
-      React.createElement('div', { className: 'form-group' },
-        React.createElement('textarea', {
-          className: 'textarea',
-          placeholder: 'Escriba aquí su queja (mínimo 10 caracteres, máximo 250)',
-          value: complaintText,
-          maxLength: 250,
-          onChange: (e) => setComplaintText(e.target.value)
-        }),
+    React.createElement('div', { className: 'form-group' },
+      React.createElement(Dropdown, {
+        options: entities,
+        selectedOption: selectedEntity,
+        onSelect: setSelectedEntity,
+        placeholder: selectedEntity ? selectedEntity.nombre : 'Entidades',
+        displayKey: 'nombre'
+      })
+    ),
+    
+    React.createElement('div', { className: 'form-group textarea-group' },
+      React.createElement('textarea', {
+        className: 'form-textarea',
+        placeholder: 'Escriba aquí su queja',
+        value: complaintText,
+        maxLength: 250,
+        onChange: (e) => setComplaintText(e.target.value)
+      }),
         React.createElement('div', { className: 'character-counter' },
           React.createElement('span', { 
             className: complaintText.trim().length < 10 ? 'counter-error' : 
@@ -160,36 +153,21 @@ const WriteComplaint = () => {
       React.createElement(MathCaptcha, {
         onValidate: setCaptchaValid,
         isValid: captchaValid,
-        resetTrigger: captchaReset
+        resetTrigger: captchaReset,
+        darkTheme: true
       }),
       
       message && React.createElement('div', { 
-        className: `message ${messageType}`,
-        style: {
-          padding: '10px',
-          margin: '15px 0',
-          borderRadius: '4px',
-          textAlign: 'center',
-          fontWeight: 'bold',
-          backgroundColor: messageType === 'success' ? '#d4edda' : '#f8d7da',
-          color: messageType === 'success' ? '#155724' : '#721c24',
-          border: `1px solid ${messageType === 'success' ? '#c3e6cb' : '#f5c6cb'}`
-        }
+        className: `message ${messageType}`
       }, message),
       
       React.createElement('div', { className: 'button-group' },
         React.createElement('button', {
-          className: 'btn btn-danger',
-          onClick: handleCancel,
-          disabled: isSubmitting
-        }, 'Cancelar'),
-        React.createElement('button', {
-          className: 'btn btn-success',
+          className: 'form-button',
           onClick: handleSave,
           disabled: !selectedEntity || validateComplaintText(complaintText) !== null || !captchaValid || isSubmitting
         }, isSubmitting ? 'Guardando...' : 'Guardar')
       )
-    )
   );
 };
 

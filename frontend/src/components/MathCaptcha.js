@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const MathCaptcha = ({ onValidate, isValid, resetTrigger }) => {
+const MathCaptcha = ({ onValidate, isValid, resetTrigger, darkTheme = false }) => {
   const [num1, setNum1] = useState(0);
   const [num2, setNum2] = useState(0);
   const [operation, setOperation] = useState('+');
@@ -80,7 +80,7 @@ const MathCaptcha = ({ onValidate, isValid, resetTrigger }) => {
     generateNewProblem();
   };
 
-  return React.createElement('div', { className: 'math-captcha' },
+  return React.createElement('div', { className: `math-captcha ${darkTheme ? 'dark' : ''}` },
     React.createElement('div', { className: 'captcha-header' },
       React.createElement('label', null, 'Resuelve la operación para continuar:')
     ),
@@ -89,21 +89,23 @@ const MathCaptcha = ({ onValidate, isValid, resetTrigger }) => {
         React.createElement('span', { className: 'math-text' },
           `${num1} ${operation} ${num2} = `
         ),
-        React.createElement('input', {
-          type: 'text',
-          value: userAnswer,
-          onChange: handleInputChange,
-          placeholder: '?',
-          className: `captcha-input ${isValid === true ? 'valid' : isValid === false && userAnswer ? 'invalid' : ''}`,
-          maxLength: 4
-        })
-      ),
-      React.createElement('button', {
-        type: 'button',
-        onClick: handleRefresh,
-        className: 'captcha-refresh-btn',
-        title: 'Generar nuevo problema'
-      }, '🔄')
+        React.createElement('div', { className: 'input-refresh-container' },
+          React.createElement('input', {
+            type: 'text',
+            value: userAnswer,
+            onChange: handleInputChange,
+            placeholder: '?',
+            className: `captcha-input ${isValid === true ? 'valid' : isValid === false && userAnswer ? 'invalid' : ''}`,
+            maxLength: 4
+          }),
+          React.createElement('button', {
+            type: 'button',
+            onClick: handleRefresh,
+            className: 'captcha-refresh-btn',
+            title: 'Generar nuevo problema'
+          }, '🔄')
+        )
+      )
     ),
     isValid === false && userAnswer && React.createElement('div', { className: 'captcha-error' },
       'Respuesta incorrecta. Inténtalo de nuevo.'
