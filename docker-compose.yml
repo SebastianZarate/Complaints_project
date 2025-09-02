@@ -19,6 +19,16 @@ services:
       MAX_COMPLAINTS_PER_IP: ${MAX_COMPLAINTS_PER_IP:-10}
       RATE_LIMIT_WINDOW_MINUTES: ${RATE_LIMIT_WINDOW_MINUTES:-15}
       LOG_LEVEL: info
+      # Variables de email para auditoría
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_SECURE: ${EMAIL_SECURE:-false}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_TO: ${EMAIL_TO}
+      ENABLE_AUDIT: ${ENABLE_AUDIT:-true}
+      ENABLE_EMAIL_NOTIFICATIONS: ${ENABLE_EMAIL_NOTIFICATIONS:-true}
     depends_on:
       mysql:
         condition: service_healthy

@@ -1,6 +1,12 @@
 # Node modules
 node_modules/
 
+
+#.env
+.env
+.env.test
+
+
 # Logs
 logs
 *.log

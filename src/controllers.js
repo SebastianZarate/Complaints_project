@@ -1,9 +1,11 @@
 const DatabaseManager = require('./database');
+const AuditLogger = require('./auditLogger');
 
 class ComplaintsController {
     constructor() {
         this.db = new DatabaseManager();
         this.rateLimiter = new Map();
+        this.auditLogger = new AuditLogger();
     }
 
     // Middleware de seguridad mejorado
@@ -274,6 +276,19 @@ class ComplaintsController {
 
             const result = await this.db.createQueja(quejaData);
 
+            // 📧 AUDITORÍA: Registrar nueva queja
+            await this.auditLogger.logOperation({
+                operation: 'NUEVA_QUEJA',
+                ip: clientIp,
+                userAgent: userAgent,
+                details: {
+                    quejaId: result.insertId,
+                    entidadId: quejaData.entidad_id,
+                    entidadNombre: entidad.nombre,
+                    descripcionLength: quejaData.descripcion.length
+                }
+            }, req);
+
             res.status(201).json({
                 success: true,
                 message: 'Queja creada exitosamente',
@@ -401,6 +416,8 @@ class ComplaintsController {
         try {
             const startTime = Date.now();
             const { entidad } = req.params;
+            const clientIp = req.ip || req.connection.remoteAddress;
+            const userAgent = req.get('User-Agent');
 
             await this.db.init();
             
@@ -424,6 +441,18 @@ class ComplaintsController {
 
             const quejas = await this.db.getQuejasByEntidad(entidadId);
             const entidadInfo = await this.db.getEntidadById(entidadId);
+
+            // 📧 AUDITORÍA: Registrar consulta por entidad
+            await this.auditLogger.logOperation({
+                operation: 'CONSULTA_ENTIDAD',
+                ip: clientIp,
+                userAgent: userAgent,
+                details: {
+                    entidad: entidadInfo.nombre,
+                    entidadId: entidadId,
+                    cantidadQuejas: quejas.length
+                }
+            }, req);
 
             res.json({
                 success: true,
@@ -449,6 +478,9 @@ class ComplaintsController {
     async getEstadisticas(req, res) {
         try {
             const startTime = Date.now();
+            const clientIp = req.ip || req.connection.remoteAddress;
+            const userAgent = req.get('User-Agent');
+            
             await this.db.init();
 
             const [
@@ -462,6 +494,17 @@ class ComplaintsController {
                 this.db.getQuejasPorEntidad(),
                 this.db.getQuejasPorMes(12)
             ]);
+
+            // 📧 AUDITORÍA: Registrar acceso a reporte general
+            await this.auditLogger.logOperation({
+                operation: 'REPORTE_GENERAL',
+                ip: clientIp,
+                userAgent: userAgent,
+                details: {
+                    totalQuejas: estadisticasGenerales.total_quejas,
+                    totalEntidades: quejasPorEntidad.length
+                }
+            }, req);
 
             res.json({
                 success: true,

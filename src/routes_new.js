@@ -60,7 +60,6 @@ router.get('/quejas/:id', (req, res) => complaintsController.getQuejaById(req, r
 router.post('/quejas', 
     // complaintsLimiter,  // Comentado para desarrollo
     // complaintsController.securityMiddleware.bind(complaintsController),  // Comentado para desarrollo
-    complaintsController.auditLogger.createAuditMiddleware('CREATE_COMPLAINT'),
     (req, res) => complaintsController.createQueja(req, res)
 );
 
@@ -69,18 +68,9 @@ router.patch('/quejas/:id/estado', (req, res) => complaintsController.updateQuej
 router.delete('/quejas/:id', (req, res) => complaintsController.deleteQueja(req, res));
 
 // Rutas para reportes/estadísticas
-router.get('/estadisticas', 
-    complaintsController.auditLogger.createAuditMiddleware('GENERAL_REPORT'),
-    (req, res) => complaintsController.getEstadisticas(req, res)
-);
-router.get('/reportes', 
-    complaintsController.auditLogger.createAuditMiddleware('GENERAL_REPORT'),
-    (req, res) => complaintsController.getReportes(req, res)
-);
-router.get('/reportes/csv', 
-    complaintsController.auditLogger.createAuditMiddleware('GENERAL_REPORT'),
-    (req, res) => complaintsController.getReporteCSV(req, res)
-);
+router.get('/estadisticas', (req, res) => complaintsController.getEstadisticas(req, res));
+router.get('/reportes', (req, res) => complaintsController.getReportes(req, res));
+router.get('/reportes/csv', (req, res) => complaintsController.getReporteCSV(req, res));
 
 // Rutas alternativas (compatibilidad)
 router.get('/complaints', (req, res) => complaintsController.getAllQuejas(req, res));
@@ -93,10 +83,7 @@ router.post('/complaints',
 router.get('/entities', (req, res) => complaintsController.getEntidades(req, res));
 
 // Búsqueda de quejas por entidad
-router.get('/quejas/entidad/:entidad', 
-    complaintsController.auditLogger.createAuditMiddleware('CONSULT_BY_ENTITY'),
-    (req, res) => complaintsController.getQuejasPorEntidad(req, res)
-);
+router.get('/quejas/entidad/:entidad', (req, res) => complaintsController.getQuejasPorEntidad(req, res));
 
 // Ruta para consultar resumen de auditoría (admin)
 router.get('/auditoria/resumen', async (req, res) => {
